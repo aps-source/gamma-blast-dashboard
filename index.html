@@ -1,0 +1,469 @@
+<!doctype html>
+<title>Gamma Blast</title>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c11;
+    --surface: #12151d;
+    --surface-2: #191e2a;
+    --border: #262c3b;
+    --border-soft: #1c212d;
+    --text: #edf0f7;
+    --text-dim: #8b93a8;
+    --text-faint: #565f74;
+    --accent: #ff4d6d;
+    --accent-glow: rgba(255, 77, 109, 0.35);
+    --call: #f5a623;
+    --call-dim: rgba(245, 166, 35, 0.16);
+    --put: #8b7cf6;
+    --put-dim: rgba(139, 124, 246, 0.18);
+    --good: #2fd08a;
+    --bad: #ff5d5d;
+    --grid-line: rgba(255, 255, 255, 0.05);
+    font-family: "Sora", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    background-image:
+      radial-gradient(circle at 12% -10%, rgba(255, 77, 109, 0.09), transparent 45%),
+      radial-gradient(circle at 88% 0%, rgba(139, 124, 246, 0.08), transparent 45%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 22px 60px; }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    padding-bottom: 22px;
+    margin-bottom: 26px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .brand-eyebrow {
+    font-family: "Space Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  h1 {
+    font-family: "Rajdhani", sans-serif;
+    font-weight: 700;
+    font-size: 42px;
+    letter-spacing: 0.01em;
+    margin: 0;
+    text-wrap: balance;
+    line-height: 1;
+    background: linear-gradient(120deg, #ffffff 0%, #ffb9c6 55%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .subtitle { color: var(--text-dim); font-size: 14px; margin: 8px 0 0; max-width: 46ch; }
+  .header-readout {
+    display: flex; gap: 22px; align-items: center;
+    font-family: "Space Mono", monospace;
+  }
+  .readout-item { text-align: right; }
+  .readout-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); }
+  .readout-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rupee { font-family: "Segoe UI", Arial, sans-serif; } /* Space Mono/Rajdhani lack a ₹ glyph on some systems */
+  .readout-value.good { color: var(--good); }
+  .readout-value.bad { color: var(--bad); }
+
+  /* ---------- Instrument grid ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 18px;
+    margin-bottom: 26px;
+  }
+
+  .panel {
+    background: linear-gradient(180deg, var(--surface) 0%, var(--surface) 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel.fire { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow), 0 0 28px -6px var(--accent-glow); }
+
+  .panel-head { display: flex; align-items: center; justify-content: space-between; }
+  .panel-title { display: flex; align-items: baseline; gap: 10px; }
+  .panel-title h2 { font-family: "Rajdhani", sans-serif; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.01em; }
+  .panel-expiry { font-family: "Space Mono", monospace; font-size: 11px; color: var(--text-faint); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: "Space Mono", monospace;
+    font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 4px 9px; border-radius: 100px; border: 1px solid var(--border);
+    color: var(--text-dim); white-space: nowrap;
+  }
+  .pill.on { border-color: rgba(47, 208, 138, 0.4); color: var(--good); background: rgba(47, 208, 138, 0.08); }
+  .pill.off { color: var(--text-faint); }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .trend-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    font-family: "Space Mono", monospace;
+    font-size: 11px; letter-spacing: 0.04em;
+    padding: 5px 10px; border-radius: 8px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+  .chip.bullish { color: var(--call); border-color: rgba(245, 166, 35, 0.35); background: var(--call-dim); }
+  .chip.bearish { color: var(--put); border-color: rgba(139, 124, 246, 0.35); background: var(--put-dim); }
+
+  /* ---------- Pressure gauge ---------- */
+  .gauge-label-row { display: flex; justify-content: space-between; font-family: "Space Mono", monospace; font-size: 10px; color: var(--text-faint); letter-spacing: 0.05em; }
+  .gauge-track {
+    position: relative;
+    height: 10px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--put-dim), var(--surface-2) 45%, var(--surface-2) 55%, var(--call-dim));
+    border: 1px solid var(--border);
+    margin: 6px 0 2px;
+  }
+  .gauge-marker {
+    position: absolute; top: 50%; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--text); border: 2px solid var(--bg);
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 1px var(--border);
+    transition: left 0.4s ease;
+  }
+  .gauge-marker.resistance { background: var(--call); box-shadow: 0 0 10px 1px rgba(245, 166, 35, 0.6); }
+  .gauge-marker.support { background: var(--put); box-shadow: 0 0 10px 1px rgba(139, 124, 246, 0.6); }
+  .gauge-readout { font-family: "Space Mono", monospace; font-size: 11px; color: var(--text-dim); display: flex; justify-content: space-between; }
+  .gauge-status { font-size: 13px; color: var(--text); margin-top: 2px; }
+
+  /* ---------- Squeeze strike + checklist ---------- */
+  .squeeze-box {
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .squeeze-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .squeeze-strike { font-family: "Rajdhani", sans-serif; font-weight: 700; font-size: 19px; }
+  .squeeze-strike.call { color: var(--call); }
+  .squeeze-strike.put { color: var(--put); }
+  .squeeze-meta { font-family: "Space Mono", monospace; font-size: 10.5px; color: var(--text-faint); }
+
+  .checklist { display: flex; flex-direction: column; gap: 7px; }
+  .check-row { display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
+  .check-dot {
+    width: 9px; height: 9px; border-radius: 50%; flex: none;
+    background: var(--surface); border: 1.5px solid var(--text-faint);
+  }
+  .check-dot.met { background: var(--good); border-color: var(--good); box-shadow: 0 0 6px 0 rgba(47, 208, 138, 0.7); }
+  .check-label { color: var(--text-dim); flex: 1; }
+  .check-val { font-family: "Space Mono", monospace; font-size: 11px; color: var(--text-faint); }
+  .no-history { color: var(--text-faint); font-size: 12px; font-style: italic; }
+
+  /* ---------- Position card ---------- */
+  .position-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: var(--surface-2);
+  }
+  .position-card.empty { color: var(--text-faint); font-size: 12.5px; text-align: center; padding: 16px; }
+  .position-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .position-side { font-family: "Rajdhani", sans-serif; font-weight: 700; font-size: 17px; }
+  .position-pnl { font-family: "Space Mono", monospace; font-weight: 700; font-size: 15px; }
+  .position-detail { font-family: "Space Mono", monospace; font-size: 11px; color: var(--text-dim); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .flags { display: flex; gap: 6px; margin-top: 8px; }
+  .flag { font-size: 9.5px; padding: 2px 7px; border-radius: 100px; border: 1px solid var(--border); color: var(--text-faint); font-family: "Space Mono", monospace; letter-spacing: 0.05em; }
+  .flag.active { color: var(--accent); border-color: var(--accent-glow); }
+
+  .action-line { font-size: 11.5px; color: var(--text-faint); border-top: 1px dashed var(--border-soft); padding-top: 10px; font-family: "Space Mono", monospace; }
+  .error-line { color: var(--bad); font-size: 12.5px; padding: 30px 10px; text-align: center; }
+  .waiting-line { color: var(--text-faint); font-size: 12.5px; padding: 30px 10px; text-align: center; }
+
+  /* ---------- Sizing row ---------- */
+  .sizing-row { display: flex; justify-content: space-between; align-items: center; font-family: "Space Mono", monospace; font-size: 11px; color: var(--text-dim); }
+  .risk-chip { padding: 3px 9px; border-radius: 100px; border: 1px solid var(--border); }
+  .risk-chip.cooling { color: var(--bad); border-color: rgba(255, 93, 93, 0.4); background: rgba(255, 93, 93, 0.08); }
+  .risk-chip.baseline { color: var(--good); border-color: rgba(47, 208, 138, 0.3); background: rgba(47, 208, 138, 0.07); }
+
+  /* ---------- Trade ledger ---------- */
+  .ledger {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .ledger h3 { font-family: "Rajdhani", sans-serif; font-size: 19px; margin: 0 0 4px; letter-spacing: 0.02em; }
+  .ledger .note { color: var(--text-faint); font-size: 11.5px; margin: 0 0 14px; }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-family: "Space Mono", monospace; font-size: 12px; white-space: nowrap; }
+  th { text-align: left; color: var(--text-faint); font-weight: 400; text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border-soft); color: var(--text-dim); }
+  tr:last-child td { border-bottom: none; }
+  td.pnl.good, span.good { color: var(--good); }
+  td.pnl.bad, span.bad { color: var(--bad); }
+  .empty-ledger { color: var(--text-faint); font-size: 12.5px; padding: 18px 4px; }
+
+  footer {
+    margin-top: 30px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--text-faint);
+    font-size: 11.5px;
+    line-height: 1.6;
+    max-width: 80ch;
+  }
+  footer b { color: var(--text-dim); }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 32px; }
+    header { flex-direction: column; align-items: flex-start; }
+    .header-readout { align-self: stretch; justify-content: space-between; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <p class="brand-eyebrow">Short-Covering Squeeze Monitor</p>
+      <h1>Gamma Blast</h1>
+      <p class="subtitle">NIFTY · BANK NIFTY weekly options — OI-unwind + volume-spike + breakout entries, paper traded live near expiry.</p>
+    </div>
+    <div class="header-readout">
+      <div class="readout-item">
+        <div class="readout-label">Equity</div>
+        <div class="readout-value" id="equity-val">—</div>
+      </div>
+      <div class="readout-item">
+        <div class="readout-label">Updated</div>
+        <div class="readout-value" id="updated-val" style="font-size:13px;">—</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid" id="instrument-grid"></div>
+
+  <div class="ledger">
+    <h3>Trade Ledger</h3>
+    <p class="note">Most recent closed (and partial) paper trades across all three instruments.</p>
+    <div class="table-scroll" id="ledger-table"></div>
+  </div>
+
+  <footer>
+    <p><b>Paper trading only</b> — no live orders are ever placed. Dhan does not expose historical intraday per-strike OI/volume, so this strategy is forward-tested live rather than backtested: entry signals need ~21 ticks (roughly 5+ hours at the 15-min cadence) of history on the <i>same</i> squeeze strike before they can fire at all, and each stored bar uses a single LTP snapshot as its O/H/L/C (no true intrabar range is available for the option premium). Stop-loss, +100% breakeven ratchet, +200% partial-exit-and-trail, 2-trading-day max hold, and forced square-off before expiry settlement are all first-pass, untuned assumptions — not a validated edge.</p>
+  </footer>
+</div>
+
+<script>
+  const DATA = {"updated_at": null, "instruments": {"NIFTY": {"instrument": "NIFTY", "not_yet_ticked": true}, "BANKNIFTY": {"instrument": "BANKNIFTY", "not_yet_ticked": true}}, "recent_trades": [], "initial_capital": 32000};
+
+  function fmtNum(n, d = 1) {
+    if (n === null || n === undefined || Number.isNaN(n)) return "—";
+    return Number(n).toLocaleString("en-IN", { maximumFractionDigits: d, minimumFractionDigits: 0 });
+  }
+  function rupee() {
+    return '<span class="rupee">₹</span>';
+  }
+  function fmtMoney(n) {
+    if (n === null || n === undefined) return "—";
+    const sign = n < 0 ? "-" : "";
+    return sign + rupee() + Math.abs(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  }
+  function pctChange(entry, current) {
+    if (!entry) return null;
+    return (current - entry) / entry;
+  }
+
+  function gaugePercent(spot, s1, r1) {
+    if (spot === undefined || s1 === undefined || r1 === undefined || r1 === s1) return 50;
+    const span = (r1 - s1) * 1.4; // pad so spot rarely pins to the edge
+    const mid = (r1 + s1) / 2;
+    const pct = 50 + ((spot - mid) / span) * 100;
+    return Math.max(4, Math.min(96, pct));
+  }
+
+  function renderChecklist(entryEval) {
+    if (!entryEval) return '<p class="no-history">Building history for this strike…</p>';
+    if (entryEval.checks && Object.keys(entryEval.checks).length === 0) {
+      return `<p class="no-history">${entryEval.reason}</p>`;
+    }
+    const c = entryEval.checks;
+    const rows = [
+      { label: "OI unwind ≥5%", met: c.oi_unwind, val: (c.prev_oi != null && c.latest_oi != null) ? `${fmtNum(c.prev_oi,0)} → ${fmtNum(c.latest_oi,0)}` : "—" },
+      { label: "Volume ≥2.5× SMA20", met: c.volume_spike, val: (c.latest_volume != null) ? `${fmtNum(c.latest_volume,0)} vs ${fmtNum(c.volume_sma20,0)}` : "—" },
+      { label: "Close > prior high", met: c.price_breakout, val: (c.latest_close != null) ? `${fmtNum(c.latest_close,1)} > ${fmtNum(c.prev_high,1)}` : "—" },
+    ];
+    return rows.map(r => `
+      <div class="check-row">
+        <div class="check-dot ${r.met ? "met" : ""}"></div>
+        <div class="check-label">${r.label}</div>
+        <div class="check-val">${r.val}</div>
+      </div>`).join("");
+  }
+
+  function renderPosition(pos) {
+    if (!pos) return '<div class="position-card empty">Flat — no open paper position</div>';
+    const changePct = pctChange(pos.entry_price, pos.entry_price); // placeholder if no live ltp in state
+    return `
+      <div class="position-card">
+        <div class="position-top">
+          <div class="position-side ${pos.side === "CALL" ? "chip bullish" : "chip bearish"}" style="background:none;border:none;padding:0;">${pos.side} ${fmtNum(pos.strike, 0)}</div>
+        </div>
+        <div class="position-detail">
+          <span>Entry ${rupee()}${fmtNum(pos.entry_price, 2)}</span>
+          <span>SL ${rupee()}${fmtNum(pos.stop_loss, 2)}</span>
+          <span>${pos.lots} lot(s) × ${pos.lot_size}</span>
+          <span>Risk ${fmtNum(pos.risk_pct, 1)}%</span>
+        </div>
+        <div class="flags">
+          <div class="flag ${pos.ratcheted ? "active" : ""}">Ratcheted</div>
+          <div class="flag ${pos.partial_exit_done ? "active" : ""}">Partial booked</div>
+        </div>
+      </div>`;
+  }
+
+  function renderPanel(instrument, d) {
+    if (!d || d.not_yet_ticked) {
+      return `
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><h2>${instrument}</h2></div>
+          </div>
+          <div class="waiting-line">Awaiting first live tick during market hours (09:15–15:30 IST).</div>
+        </div>`;
+    }
+    if (d.error) {
+      return `
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><h2>${instrument}</h2></div>
+          </div>
+          <div class="error-line">⚠ ${d.error}</div>
+        </div>`;
+    }
+
+    const inWindow = !!d.in_tte_window;
+    const trend = d.trend;
+    const zone = d.zone;
+    const signal = d.combined_signal;
+    const wl = d.watchlist;
+    const firing = d.entry_eval && d.entry_eval.fire;
+
+    const levels = d.levels || {};
+    const gaugePct = gaugePercent(d.spot, levels.s1, levels.r1);
+    const markerClass = zone === "resistance" ? "resistance" : (zone === "support" ? "support" : "");
+
+    let statusLine = "No S/R zone in play";
+    if (zone === "resistance") statusLine = `Testing resistance (R1 ${rupee()}${fmtNum(levels.r1,1)})`;
+    if (zone === "support") statusLine = `Testing support (S1 ${rupee()}${fmtNum(levels.s1,1)})`;
+
+    let signalLine = "No directional bias";
+    if (signal === "CALL") signalLine = "Bullish + resistance → watching for CALL squeeze";
+    if (signal === "PUT") signalLine = "Bearish + support → watching for PUT squeeze";
+
+    const equity = d.equity;
+    const sizing = d.sizing_state || {};
+    const cooling = (sizing.consecutive_losses || 0) >= 3;
+
+    return `
+      <div class="panel ${firing ? "fire" : ""}">
+        <div class="panel-head">
+          <div class="panel-title">
+            <h2>${instrument}</h2>
+            <span class="panel-expiry">${d.expiry || ""}</span>
+          </div>
+          <div class="pill ${inWindow ? "on" : "off"}"><span class="dot"></span>${inWindow ? "In TTE window" : "Outside window"}</div>
+        </div>
+
+        <div class="trend-row">
+          <div class="chip ${trend === "bullish" ? "bullish" : trend === "bearish" ? "bearish" : ""}">
+            SuperTrend: ${trend ? trend.toUpperCase() : "warming up"}
+          </div>
+          <div class="chip">Spot ${rupee()}${fmtNum(d.spot, 1)}</div>
+        </div>
+
+        <div>
+          <div class="gauge-label-row"><span>S1 ${rupee()}${fmtNum(levels.s1,1)}</span><span>Pivot ${rupee()}${fmtNum(levels.pivot,1)}</span><span>R1 ${rupee()}${fmtNum(levels.r1,1)}</span></div>
+          <div class="gauge-track"><div class="gauge-marker ${markerClass}" style="left:${gaugePct}%"></div></div>
+          <div class="gauge-status">${statusLine}</div>
+        </div>
+
+        <div class="squeeze-box">
+          <div class="squeeze-head">
+            <div>
+              ${wl ? `<div class="squeeze-strike ${wl.side === "CALL" ? "call" : "put"}">${wl.side} ${fmtNum(wl.strike,0)}</div>` : `<div class="squeeze-meta">${signalLine}</div>`}
+            </div>
+            ${wl ? `<div class="squeeze-meta">${d.history_bars || 0}/21 bars</div>` : ""}
+          </div>
+          <div class="checklist">${wl ? renderChecklist(d.entry_eval) : '<p class="no-history">' + signalLine + '</p>'}</div>
+        </div>
+
+        ${renderPosition(d.open_position)}
+
+        <div class="sizing-row">
+          <span>Equity ${fmtMoney(equity)}</span>
+          <span class="risk-chip ${cooling ? "cooling" : "baseline"}">Risk ${fmtNum(sizing.risk_pct,1)}% ${cooling ? "· cooling" : ""}</span>
+        </div>
+
+        ${d.action_taken && d.action_taken !== "none" ? `<div class="action-line">${d.action_taken}</div>` : ""}
+      </div>`;
+  }
+
+  function renderLedger(trades) {
+    if (!trades || trades.length === 0) {
+      return '<div class="empty-ledger">No closed trades yet.</div>';
+    }
+    const rows = trades.slice().reverse().map(t => {
+      const pnlClass = (t.pnl || 0) >= 0 ? "good" : "bad";
+      // Use qty/lot_size (not the static "lots" field) so a partial-exit row
+      // correctly shows the half-lot quantity that row actually closed.
+      const lotsLabel = t.qty != null && t.lot_size ? `${fmtNum(t.qty / t.lot_size, 2)} × ${fmtNum(t.lot_size,0)}` : "—";
+      return `<tr>
+        <td>${(t.entry_time || "").replace("T", " ")}</td>
+        <td>${(t.exit_time || "").replace("T", " ")}</td>
+        <td>${t.instrument || ""}</td>
+        <td><span class="${t.side === 'CALL' ? 'good' : 'bad'}">${t.side || ""} ${fmtNum(t.strike,0)}</span></td>
+        <td>${lotsLabel}</td>
+        <td>${rupee()}${fmtNum(t.entry_price,2)}</td>
+        <td>${rupee()}${fmtNum(t.exit_price,2)}</td>
+        <td>${t.exit_reason || ""}</td>
+        <td class="pnl ${pnlClass}">${fmtMoney(t.pnl)}</td>
+      </tr>`;
+    }).join("");
+    return `<table>
+      <thead><tr><th>Entry Time</th><th>Exit Time</th><th>Instr</th><th>Side/Strike</th><th>Lots</th><th>Entry</th><th>Exit</th><th>Reason</th><th>P&L</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  document.getElementById("instrument-grid").innerHTML =
+    Object.entries(DATA.instruments || {}).map(([name, d]) => renderPanel(name, d)).join("");
+
+  document.getElementById("ledger-table").innerHTML = renderLedger(DATA.recent_trades);
+
+  const totalPnl = (DATA.recent_trades || []).reduce((s, t) => s + (t.pnl || 0), 0);
+  const equityVal = (DATA.initial_capital || 0) + totalPnl;
+  const equityEl = document.getElementById("equity-val");
+  equityEl.innerHTML = rupee() + fmtNum(equityVal, 0);
+  equityEl.classList.add(totalPnl >= 0 ? "good" : "bad");
+
+  document.getElementById("updated-val").textContent = DATA.updated_at ? DATA.updated_at.replace("T", " ") : "not yet ticked";
+</script>
