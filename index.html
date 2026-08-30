@@ -233,6 +233,38 @@
   }
   footer b { color: var(--text-dim); }
 
+  /* ---------- Password gate ---------- */
+  .gate-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% -10%, rgba(255, 77, 109, 0.09), transparent 45%),
+      radial-gradient(circle at 88% 0%, rgba(139, 124, 246, 0.08), transparent 45%);
+    padding: 20px;
+  }
+  .gate-card {
+    width: 100%; max-width: 340px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 28px 26px; text-align: center;
+    box-shadow: 0 0 40px -12px var(--accent-glow);
+  }
+  .gate-title { font-family: "Rajdhani", sans-serif; font-size: 24px; font-weight: 700; margin: 0 0 6px; }
+  .gate-sub { color: var(--text-dim); font-size: 12.5px; margin: 0 0 18px; line-height: 1.5; }
+  .gate-input {
+    width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: "Space Mono", monospace; font-size: 14px;
+    padding: 10px 12px; margin-bottom: 12px;
+  }
+  .gate-input:focus { outline: none; border-color: var(--accent); }
+  .gate-submit {
+    width: 100%; background: var(--accent); border: none; border-radius: 8px;
+    color: #1a0a0e; font-family: "Rajdhani", sans-serif; font-weight: 700; font-size: 15px;
+    padding: 10px 12px; cursor: pointer; letter-spacing: 0.02em;
+  }
+  .gate-submit:hover { filter: brightness(1.08); }
+  .gate-error { color: var(--bad); font-size: 12px; margin: 12px 0 0; font-family: "Space Mono", monospace; }
+
   @media (max-width: 640px) {
     h1 { font-size: 32px; }
     header { flex-direction: column; align-items: flex-start; }
@@ -240,7 +272,18 @@
   }
 </style>
 
-<div class="wrap">
+<div id="gate-overlay" class="gate-overlay">
+  <form id="gate-form" class="gate-card">
+    <p class="brand-eyebrow" style="margin-bottom:14px;">Gamma Blast</p>
+    <h2 class="gate-title">Enter password</h2>
+    <p class="gate-sub">This dashboard shows live paper-trading state. Access is restricted.</p>
+    <input id="gate-input" class="gate-input" type="password" autocomplete="current-password" placeholder="Password" autofocus />
+    <button type="submit" class="gate-submit">Unlock</button>
+    <p id="gate-error" class="gate-error" hidden>Incorrect password.</p>
+  </form>
+</div>
+
+<div class="wrap" id="page-content" hidden>
   <header>
     <div>
       <p class="brand-eyebrow">Short-Covering Squeeze Monitor</p>
@@ -264,7 +307,7 @@
   <div class="ledger">
     <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
       <h3>Trade Ledger</h3>
-      <a href="https://aps-source.github.io/gamma-blast-dashboard/trades.html" target="_blank" rel="noopener" style="font-family:'Space Mono',monospace; font-size:11.5px; color:var(--text-dim); text-decoration:none; border:1px solid var(--border); border-radius:100px; padding:5px 12px;">Full day-wise history &rarr;</a>
+      <a href="https://aps-source.github.io/gamma-blast-dashboard/trades.html" style="font-family:'Space Mono',monospace; font-size:11.5px; color:var(--text-dim); text-decoration:none; border:1px solid var(--border); border-radius:100px; padding:5px 12px;">Full day-wise history &rarr;</a>
     </div>
     <p class="note">Most recent closed (and partial) paper trades across both instruments.</p>
     <div class="table-scroll" id="ledger-table"></div>
@@ -457,16 +500,59 @@
     </table>`;
   }
 
-  document.getElementById("instrument-grid").innerHTML =
-    Object.entries(DATA.instruments || {}).map(([name, d]) => renderPanel(name, d)).join("");
+  function initDashboard() {
+    document.getElementById("instrument-grid").innerHTML =
+      Object.entries(DATA.instruments || {}).map(([name, d]) => renderPanel(name, d)).join("");
 
-  document.getElementById("ledger-table").innerHTML = renderLedger(DATA.recent_trades);
+    document.getElementById("ledger-table").innerHTML = renderLedger(DATA.recent_trades);
 
-  const totalPnl = (DATA.recent_trades || []).reduce((s, t) => s + (t.pnl || 0), 0);
-  const equityVal = (DATA.initial_capital || 0) + totalPnl;
-  const equityEl = document.getElementById("equity-val");
-  equityEl.innerHTML = rupee() + fmtNum(equityVal, 0);
-  equityEl.classList.add(totalPnl >= 0 ? "good" : "bad");
+    const totalPnl = (DATA.recent_trades || []).reduce((s, t) => s + (t.pnl || 0), 0);
+    const equityVal = (DATA.initial_capital || 0) + totalPnl;
+    const equityEl = document.getElementById("equity-val");
+    equityEl.innerHTML = rupee() + fmtNum(equityVal, 0);
+    equityEl.classList.add(totalPnl >= 0 ? "good" : "bad");
 
-  document.getElementById("updated-val").textContent = DATA.updated_at ? DATA.updated_at.replace("T", " ") : "not yet ticked";
+    document.getElementById("updated-val").textContent = DATA.updated_at ? DATA.updated_at.replace("T", " ") : "not yet ticked";
+  }
+
+  // ---------- Password gate ----------
+  // NOTE: this is a casual deterrent, NOT real security - GamaBlast is
+  // served from a public GitHub Pages repo, so index.html and its embedded
+  // JSON are fetchable directly (curl, view-source, etc.) by anyone who has
+  // the URL, gate or no gate. This only stops a browser visitor from seeing
+  // the rendered page without the password; it cannot stop programmatic
+  // access to the raw file. Real access control would require a private
+  // repo (GitHub Pages for private repos needs a paid plan) or moving to a
+  // host with real auth (e.g. Cloudflare Pages + Access).
+  const GATE_SESSION_KEY = "gammaBlastAuthed";
+  const GATE_PASSWORD_HASH = "a4b5e20c8b87f286fbca4f2a3420ba6a87d5ff2a4e9f2dee9546ff84c9b9358a";
+
+  async function sha256Hex(text) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  function unlock() {
+    document.getElementById("gate-overlay").hidden = true;
+    document.getElementById("page-content").hidden = false;
+    initDashboard();
+  }
+
+  if (sessionStorage.getItem(GATE_SESSION_KEY) === "1") {
+    unlock();
+  } else {
+    document.getElementById("gate-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("gate-input");
+      const hash = await sha256Hex(input.value);
+      if (hash === GATE_PASSWORD_HASH) {
+        sessionStorage.setItem(GATE_SESSION_KEY, "1");
+        unlock();
+      } else {
+        document.getElementById("gate-error").hidden = false;
+        input.value = "";
+        input.focus();
+      }
+    });
+  }
 </script>
