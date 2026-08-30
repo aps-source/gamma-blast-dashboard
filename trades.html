@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Gamma Blast — Trade History</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0a0c11;
+    --surface: #12151d;
+    --surface-2: #191e2a;
+    --border: #262c3b;
+    --border-soft: #1c212d;
+    --text: #edf0f7;
+    --text-dim: #8b93a8;
+    --text-faint: #565f74;
+    --accent: #ff4d6d;
+    --call: #f5a623;
+    --put: #8b7cf6;
+    --good: #2fd08a;
+    --bad: #ff5d5d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Sora", system-ui, sans-serif;
+    background-image:
+      radial-gradient(circle at 12% -10%, rgba(255, 77, 109, 0.08), transparent 45%),
+      radial-gradient(circle at 88% 0%, rgba(139, 124, 246, 0.07), transparent 45%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  .rupee { font-family: "Segoe UI", Arial, sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 22px 60px; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 10px 24px; padding-bottom: 18px; margin-bottom: 22px; border-bottom: 1px solid var(--border-soft); }
+  .brand-eyebrow { font-family: "Space Mono", monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin: 0 0 6px; }
+  h1 { font-family: "Rajdhani", sans-serif; font-weight: 700; font-size: 32px; margin: 0; letter-spacing: 0.01em; }
+  .sub { color: var(--text-dim); font-size: 13.5px; margin-top: 4px; }
+  a.back { color: var(--text-dim); text-decoration: none; font-size: 13px; font-family: "Space Mono", monospace; border: 1px solid var(--border); border-radius: 100px; padding: 6px 12px; white-space: nowrap; }
+  a.back:hover { color: var(--text); border-color: var(--text-dim); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; }
+  .card h2 { font-family: "Rajdhani", sans-serif; font-size: 15px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); margin: 0 0 14px; font-weight: 600; }
+
+  .filters { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+  .filter-group { display: flex; flex-direction: column; gap: 5px; }
+  .filter-group label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-faint); font-family: "Space Mono", monospace; }
+  .filters select {
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: "Sora", sans-serif; cursor: pointer; min-width: 130px;
+  }
+  .clear-filters { background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: "Space Mono", monospace; }
+  .clear-filters:hover { color: var(--text); border-color: var(--text-dim); }
+
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .stat { text-align: center; font-family: "Space Mono", monospace; }
+  .stat .v { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 10.5px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+
+  .day-heading { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .day-date { font-family: "Rajdhani", sans-serif; font-size: 18px; font-weight: 700; }
+  .day-meta { font-size: 11.5px; color: var(--text-faint); font-family: "Space Mono", monospace; margin-top: 2px; }
+  .day-pnl { font-family: "Space Mono", monospace; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .day-pnl.good { color: var(--good); } .day-pnl.bad { color: var(--bad); }
+
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-family: "Space Mono", monospace; font-size: 12px; white-space: nowrap; }
+  th { text-align: left; color: var(--text-faint); font-weight: 400; text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border-soft); color: var(--text-dim); }
+  tr:last-child td { border-bottom: none; }
+  .side-tag { font-weight: 700; }
+  .side-tag.CALL { color: var(--call); } .side-tag.PUT { color: var(--put); }
+  .pos-pnl { color: var(--good); } .neg-pnl { color: var(--bad); }
+  .empty { color: var(--text-faint); text-align: center; padding: 40px 4px; font-size: 13.5px; }
+
+  footer { padding-top: 10px; font-size: 11.5px; color: var(--text-faint); line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <p class="brand-eyebrow">Gamma Blast</p>
+    <h1>Trade History</h1>
+    <p class="sub">Every closed paper trade, grouped by the day it closed — for future reference, not just the live tick's last 15.</p>
+  </div>
+  <a class="back" href="index.html">&larr; Back to live dashboard</a>
+</header>
+
+<div class="card">
+  <h2>Filters</h2>
+  <div class="filters">
+    <div class="filter-group"><label for="f-date">Date</label><select id="f-date"><option value="">All dates</option></select></div>
+    <div class="filter-group"><label for="f-instrument">Instrument</label><select id="f-instrument"><option value="">All instruments</option></select></div>
+    <div class="filter-group"><label for="f-side">Side</label>
+      <select id="f-side"><option value="">All sides</option><option value="CALL">CALL</option><option value="PUT">PUT</option></select>
+    </div>
+    <div class="filter-group"><label for="f-result">Result</label>
+      <select id="f-result"><option value="">Gain or loss</option><option value="gain">Gain only</option><option value="loss">Loss only</option></select>
+    </div>
+    <button class="clear-filters" id="f-clear">Clear filters</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Overall (filtered)</h2>
+  <div class="stat-row" id="overall-stats"></div>
+</div>
+
+<div id="days-root"></div>
+
+<footer>
+  Reads trades_history.json from this same site, rebuilt from paper_trade_log.json on every live tick.
+  Paper trading only — no real orders were ever placed for any trade shown here.
+</footer>
+
+</div>
+
+<script>
+const STATE_URL = "trades_history.json";
+let RAW_DATA = null;
+
+function rupee() { return '<span class="rupee">₹</span>'; }
+function fmtPts(v) { return (v > 0 ? '+' : '') + Number(v).toFixed(2); }
+function fmtNum(v, d) {
+  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  return Number(v).toLocaleString("en-IN", { maximumFractionDigits: d, minimumFractionDigits: 0 });
+}
+
+function populateFilterOptions(data) {
+  const dateSel = document.getElementById("f-date");
+  const instrSel = document.getElementById("f-instrument");
+  const prevDate = dateSel.value, prevInstr = instrSel.value;
+
+  const dates = data.days.map(d => d.date);
+  const instruments = [...new Set(data.days.flatMap(d => d.trades.map(t => t.instrument)))].sort();
+
+  dateSel.innerHTML = '<option value="">All dates</option>' + dates.map(d => `<option value="${d}">${d}</option>`).join("");
+  instrSel.innerHTML = '<option value="">All instruments</option>' + instruments.map(s => `<option value="${s}">${s}</option>`).join("");
+
+  if (dates.includes(prevDate)) dateSel.value = prevDate;
+  if (instruments.includes(prevInstr)) instrSel.value = prevInstr;
+}
+
+function getFilters() {
+  return {
+    date: document.getElementById("f-date").value,
+    instrument: document.getElementById("f-instrument").value,
+    side: document.getElementById("f-side").value,
+    result: document.getElementById("f-result").value,
+  };
+}
+
+function tradeMatches(t, day, f) {
+  if (f.date && day.date !== f.date) return false;
+  if (f.instrument && t.instrument !== f.instrument) return false;
+  if (f.side && t.side !== f.side) return false;
+  if (f.result === "gain" && !(t.pnl > 0)) return false;
+  if (f.result === "loss" && !(t.pnl < 0)) return false;
+  return true;
+}
+
+function render() {
+  const overallEl = document.getElementById("overall-stats");
+  const daysRoot = document.getElementById("days-root");
+  if (!RAW_DATA) return;
+
+  const f = getFilters();
+  const filteredDays = RAW_DATA.days
+    .map(day => ({ ...day, trades: day.trades.filter(t => tradeMatches(t, day, f)) }))
+    .filter(day => day.trades.length > 0);
+
+  const allFiltered = filteredDays.flatMap(d => d.trades);
+  const totalPnl = allFiltered.reduce((a, t) => a + (t.pnl || 0), 0);
+  const wins = allFiltered.filter(t => (t.pnl || 0) > 0).length;
+  const winRate = allFiltered.length ? Math.round((wins / allFiltered.length) * 100) : 0;
+
+  overallEl.innerHTML = `
+    <div class="stat"><div class="v">${allFiltered.length}</div><div class="k">Trades</div></div>
+    <div class="stat"><div class="v" style="color:${totalPnl >= 0 ? 'var(--good)' : 'var(--bad)'}">${rupee()}${fmtPts(totalPnl)}</div><div class="k">P&amp;L</div></div>
+    <div class="stat"><div class="v">${winRate}%</div><div class="k">Win rate</div></div>
+  `;
+
+  if (!filteredDays.length) {
+    daysRoot.innerHTML = `<div class="card"><span class="empty">No trades match the current filters</span></div>`;
+    return;
+  }
+
+  daysRoot.innerHTML = filteredDays.map(day => {
+    const dayPnl = day.trades.reduce((a, t) => a + (t.pnl || 0), 0);
+    const dayWins = day.trades.filter(t => (t.pnl || 0) > 0).length;
+    const rows = day.trades.map(t => {
+      const lotsLabel = t.qty != null && t.lot_size ? `${fmtNum(t.qty / t.lot_size, 2)}×${fmtNum(t.lot_size, 0)}` : "—";
+      return `
+      <tr>
+        <td>${(t.entry_time || "").replace("T", " ")}</td>
+        <td>${(t.exit_time || "").replace("T", " ")}</td>
+        <td>${t.instrument || ""}</td>
+        <td><span class="side-tag ${t.side}">${t.side || ""} ${fmtNum(t.strike, 0)}</span></td>
+        <td>${lotsLabel}</td>
+        <td>${rupee()}${fmtNum(t.entry_price, 2)}</td>
+        <td>${rupee()}${fmtNum(t.exit_price, 2)}</td>
+        <td>${t.exit_reason || t.reason || ""}</td>
+        <td class="${(t.pnl || 0) >= 0 ? 'pos-pnl' : 'neg-pnl'}">${rupee()}${fmtPts(t.pnl || 0)}</td>
+      </tr>`;
+    }).join("");
+
+    return `
+      <div class="card">
+        <div class="day-heading">
+          <div>
+            <div class="day-date">${day.date}</div>
+            <div class="day-meta">${day.trades.length} trade${day.trades.length === 1 ? '' : 's'} shown &middot; ${dayWins}W / ${day.trades.length - dayWins}L</div>
+          </div>
+          <div class="day-pnl ${dayPnl >= 0 ? 'good' : 'bad'}">${rupee()}${fmtPts(dayPnl)}</div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Entry Time</th><th>Exit Time</th><th>Instr</th><th>Side/Strike</th><th>Lots</th><th>Entry</th><th>Exit</th><th>Reason</th><th>P&amp;L</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+async function refresh() {
+  const daysRoot = document.getElementById("days-root");
+  try {
+    const res = await fetch(STATE_URL + "?t=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    RAW_DATA = await res.json();
+  } catch (e) {
+    daysRoot.innerHTML = `<div class="card"><span class="empty">Failed to load trades_history.json — ${e.message}</span></div>`;
+    return;
+  }
+  populateFilterOptions(RAW_DATA);
+  render();
+}
+
+["f-date", "f-instrument", "f-side", "f-result"].forEach(id => document.getElementById(id).addEventListener("change", render));
+document.getElementById("f-clear").addEventListener("click", () => {
+  ["f-date", "f-instrument", "f-side", "f-result"].forEach(id => document.getElementById(id).value = "");
+  render();
+});
+
+refresh();
+setInterval(refresh, 30000);
+</script>
+</body>
+</html>
