@@ -548,7 +548,12 @@
   }
 
   function unlock() {
-    document.getElementById("gate-overlay").hidden = true;
+    // .gate-overlay has its own `display: flex` rule, which beats the
+    // browser's default `[hidden]{display:none}` UA-stylesheet behavior
+    // outside the Claude Artifact's injected reset (which adds
+    // `!important` to that rule) - so setting .hidden here silently did
+    // nothing on GitHub Pages. Inline style always wins, so use that.
+    document.getElementById("gate-overlay").style.display = "none";
     document.getElementById("page-content").hidden = false;
     initDashboard();
   }
