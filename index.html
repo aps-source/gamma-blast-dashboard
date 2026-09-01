@@ -190,9 +190,6 @@
   .position-side { font-family: "Rajdhani", sans-serif; font-weight: 700; font-size: 17px; }
   .position-pnl { font-family: "Space Mono", monospace; font-weight: 700; font-size: 15px; }
   .position-detail { font-family: "Space Mono", monospace; font-size: 11px; color: var(--text-dim); display: flex; flex-wrap: wrap; gap: 4px 12px; }
-  .flags { display: flex; gap: 6px; margin-top: 8px; }
-  .flag { font-size: 9.5px; padding: 2px 7px; border-radius: 100px; border: 1px solid var(--border); color: var(--text-faint); font-family: "Space Mono", monospace; letter-spacing: 0.05em; }
-  .flag.active { color: var(--accent); border-color: var(--accent-glow); }
 
   .action-line { font-size: 11.5px; color: var(--text-faint); border-top: 1px dashed var(--border-soft); padding-top: 10px; font-family: "Space Mono", monospace; }
   .error-line { color: var(--bad); font-size: 12.5px; padding: 30px 10px; text-align: center; }
@@ -266,12 +263,12 @@
       <h3>Trade Ledger</h3>
       <a href="https://aps-source.github.io/gamma-blast-dashboard/trades.html" target="_blank" rel="noopener" style="font-family:'Space Mono',monospace; font-size:11.5px; color:var(--text-dim); text-decoration:none; border:1px solid var(--border); border-radius:100px; padding:5px 12px;">Full day-wise history &rarr;</a>
     </div>
-    <p class="note">Most recent closed (and partial) paper trades across both instruments.</p>
+    <p class="note">Most recent closed paper trades across both instruments.</p>
     <div class="table-scroll" id="ledger-table"></div>
   </div>
 
   <footer>
-    <p><b>Paper trading only</b> — no live orders are ever placed. Dhan does not expose historical intraday per-strike OI/volume, so this strategy is forward-tested live rather than backtested: entry signals need ~21 ticks (roughly 5+ hours at the 15-min cadence) of history on a <i>given</i> squeeze strike before they can fire, and each stored bar uses a single LTP snapshot as its O/H/L/C (no true intrabar range is available for the option premium). Up to 3 candidate strikes are tracked in parallel per side (top-OI plus the strike nearest spot) so one strike falling out of favor doesn't wipe another's accumulated history. Stop-loss, +100% breakeven ratchet, +200% partial-exit-and-trail, 2-trading-day max hold, and forced square-off before expiry settlement are all first-pass, untuned assumptions — not a validated edge.</p>
+    <p><b>Paper trading only</b> — no live orders are ever placed. Live OI-unwind history still builds tick by tick (Dhan has no historical per-strike OI, even per-instrument), but price/volume history for a newly-watchlisted candidate is now pre-seeded from that contract's real intraday bars-so-far, so only the OI leg needs a couple of live ticks to warm up - not the full ~21-bar/~1.75-hour window. Up to 3 candidate strikes are tracked in parallel per side (top-OI plus the strike nearest spot) so one strike falling out of favor doesn't wipe another's accumulated history. Stop-loss, a flat +100% take-profit, 2-trading-day max hold, and forced square-off before expiry settlement are all first-pass, untuned assumptions — not a validated edge.</p>
   </footer>
 </div>
 
@@ -290,11 +287,6 @@
     const sign = n < 0 ? "-" : "";
     return sign + rupee() + Math.abs(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
   }
-  function pctChange(entry, current) {
-    if (!entry) return null;
-    return (current - entry) / entry;
-  }
-
   function gaugePercent(spot, s1, r1) {
     if (spot === undefined || s1 === undefined || r1 === undefined || r1 === s1) return 50;
     const span = (r1 - s1) * 1.4; // pad so spot rarely pins to the edge
@@ -324,7 +316,6 @@
 
   function renderPosition(pos) {
     if (!pos) return '<div class="position-card empty">Flat — no open paper position</div>';
-    const changePct = pctChange(pos.entry_price, pos.entry_price); // placeholder if no live ltp in state
     return `
       <div class="position-card">
         <div class="position-top">
@@ -333,12 +324,9 @@
         <div class="position-detail">
           <span>Entry ${rupee()}${fmtNum(pos.entry_price, 2)}</span>
           <span>SL ${rupee()}${fmtNum(pos.stop_loss, 2)}</span>
+          <span>Target (+100%) ${rupee()}${fmtNum(pos.entry_price * 2, 2)}</span>
           <span>${pos.lots} lot(s) × ${pos.lot_size}</span>
           <span>Risk ${fmtNum(pos.risk_pct, 1)}%</span>
-        </div>
-        <div class="flags">
-          <div class="flag ${pos.ratcheted ? "active" : ""}">Ratcheted</div>
-          <div class="flag ${pos.partial_exit_done ? "active" : ""}">Partial booked</div>
         </div>
       </div>`;
   }
