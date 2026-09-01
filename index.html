@@ -271,12 +271,12 @@
   </div>
 
   <footer>
-    <p><b>Paper trading only</b> — no live orders are ever placed. Dhan does not expose historical intraday per-strike OI/volume, so this strategy is forward-tested live rather than backtested: entry signals need ~21 ticks (roughly 5+ hours at the 15-min cadence) of history on the <i>same</i> squeeze strike before they can fire at all, and each stored bar uses a single LTP snapshot as its O/H/L/C (no true intrabar range is available for the option premium). Stop-loss, +100% breakeven ratchet, +200% partial-exit-and-trail, 2-trading-day max hold, and forced square-off before expiry settlement are all first-pass, untuned assumptions — not a validated edge.</p>
+    <p><b>Paper trading only</b> — no live orders are ever placed. Dhan does not expose historical intraday per-strike OI/volume, so this strategy is forward-tested live rather than backtested: entry signals need ~21 ticks (roughly 5+ hours at the 15-min cadence) of history on a <i>given</i> squeeze strike before they can fire, and each stored bar uses a single LTP snapshot as its O/H/L/C (no true intrabar range is available for the option premium). Up to 3 candidate strikes are tracked in parallel per side (top-OI plus the strike nearest spot) so one strike falling out of favor doesn't wipe another's accumulated history. Stop-loss, +100% breakeven ratchet, +200% partial-exit-and-trail, 2-trading-day max hold, and forced square-off before expiry settlement are all first-pass, untuned assumptions — not a validated edge.</p>
   </footer>
 </div>
 
 <script>
-  const DATA = {"updated_at": "2026-09-01T15:18:02", "instruments": {"NIFTY": {"instrument": "NIFTY", "expiry": "2026-09-01", "in_tte_window": true, "trend": "bearish", "spot": 23980.55, "levels": {"pivot": 24067.56666666667, "r1": 24141.53333333334, "s1": 24006.433333333338}, "zone": "support", "combined_signal": "PUT", "watchlist": {"strike": 23950.0, "side": "PUT", "security_id": "46984"}, "history_bars": 2, "entry_eval": {"fire": false, "reason": "insufficient history (2/21 bars)", "checks": {}}, "open_position": null, "sizing_state": {"risk_pct": 1.0, "consecutive_losses": 0, "equity_curve": []}, "action_taken": "none", "equity": 32000.0}, "BANKNIFTY": {"instrument": "BANKNIFTY", "expiry": "2026-09-29", "in_tte_window": false, "trend": "bearish", "spot": 57264.15, "levels": {"pivot": 57745.75, "r1": 58304.15, "s1": 57466.55}, "zone": "support", "combined_signal": null, "watchlist": null, "history_bars": 0, "open_position": null, "sizing_state": {"risk_pct": 1.0, "consecutive_losses": 0, "equity_curve": []}, "action_taken": "none", "equity": 32000.0}}, "recent_trades": [], "initial_capital": 32000.0};
+  const DATA = {"updated_at": "2026-09-01T15:18:02", "instruments": {"NIFTY": {"instrument": "NIFTY", "expiry": "2026-09-01", "in_tte_window": true, "trend": "bearish", "spot": 23980.55, "levels": {"pivot": 24067.56666666667, "r1": 24141.53333333334, "s1": 24006.433333333338}, "zone": "support", "combined_signal": "PUT", "watchlist": [{"strike": 23950.0, "side": "PUT", "security_id": "46984", "reason": "top_oi"}], "history_bars": {"PUT_23950": 2}, "entry_eval": {"PUT_23950": {"fire": false, "reason": "insufficient history (2/21 bars)", "checks": {}}}, "open_position": null, "sizing_state": {"risk_pct": 1.0, "consecutive_losses": 0, "equity_curve": []}, "action_taken": "none", "equity": 32000.0}, "BANKNIFTY": {"instrument": "BANKNIFTY", "expiry": "2026-09-29", "in_tte_window": false, "trend": "bearish", "spot": 57264.15, "levels": {"pivot": 57745.75, "r1": 58304.15, "s1": 57466.55}, "zone": "support", "combined_signal": null, "watchlist": [], "history_bars": {}, "entry_eval": {}, "open_position": null, "sizing_state": {"risk_pct": 1.0, "consecutive_losses": 0, "equity_curve": []}, "action_taken": "none", "equity": 32000.0}}, "recent_trades": [], "initial_capital": 32000.0};
 
   function fmtNum(n, d = 1) {
     if (n === null || n === undefined || Number.isNaN(n)) return "—";
@@ -367,8 +367,12 @@
     const trend = d.trend;
     const zone = d.zone;
     const signal = d.combined_signal;
-    const wl = d.watchlist;
-    const firing = d.entry_eval && d.entry_eval.fire;
+    const watchlist = d.watchlist || [];
+    const historyBars = d.history_bars || {};
+    const entryEvals = d.entry_eval || {};
+    const firing = Object.values(entryEvals).some(ev => ev && ev.fire);
+    function candidateKey(c) { return `${c.side}_${Math.round(c.strike)}`; }
+    const REASON_LABEL = { top_oi: "Top OI", nearest_spot: "Near spot", open_position: "Open position" };
 
     const levels = d.levels || {};
     const gaugePct = gaugePercent(d.spot, levels.s1, levels.r1);
@@ -409,15 +413,23 @@
           <div class="gauge-status">${statusLine}</div>
         </div>
 
-        <div class="squeeze-box">
-          <div class="squeeze-head">
-            <div>
-              ${wl ? `<div class="squeeze-strike ${wl.side === "CALL" ? "call" : "put"}">${wl.side} ${fmtNum(wl.strike,0)}</div>` : `<div class="squeeze-meta">${signalLine}</div>`}
+        ${watchlist.length > 0 ? watchlist.map(cand => {
+          const key = candidateKey(cand);
+          return `
+          <div class="squeeze-box">
+            <div class="squeeze-head">
+              <div>
+                <div class="squeeze-strike ${cand.side === "CALL" ? "call" : "put"}">${cand.side} ${fmtNum(cand.strike,0)}</div>
+                <div class="squeeze-meta">${REASON_LABEL[cand.reason] || cand.reason || ""}</div>
+              </div>
+              <div class="squeeze-meta">${historyBars[key] || 0}/21 bars</div>
             </div>
-            ${wl ? `<div class="squeeze-meta">${d.history_bars || 0}/21 bars</div>` : ""}
-          </div>
-          <div class="checklist">${wl ? renderChecklist(d.entry_eval) : '<p class="no-history">' + signalLine + '</p>'}</div>
-        </div>
+            <div class="checklist">${renderChecklist(entryEvals[key])}</div>
+          </div>`;
+        }).join("") : `
+        <div class="squeeze-box">
+          <p class="no-history">${signalLine}</p>
+        </div>`}
 
         ${renderPosition(d.open_position)}
 
